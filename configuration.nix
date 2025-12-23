@@ -5,32 +5,68 @@
 { config, pkgs, ... }:
 
 {
-  imports = [
-    # Include the results of the hardware scan.
-    ./hardware-configuration.nix
-  ];
-
-  # Bootloader.
+  # ================================================================
+  # 1. 引导与内核 (Boot & Kernel)
+  # ================================================================
   boot.loader.systemd-boot.enable = true;
+  boot.loader.systemd-boot.configurationLimit = 10; # 限制条目数量
   boot.loader.efi.canTouchEfiVariables = true;
 
-  # Use latest kernel.
-  boot.kernelPackages = pkgs.linuxPackages_latest;
+  # 使用 Zen 内核
+  boot.kernelPackages = pkgs.linuxPackages_zen;
+  boot.kernel.sysctl."kernel.sysrq" = 1;
 
-  networking.hostName = "nixos"; # Define your hostname.
-  # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
+  # 启用 Plymouth 启动动画
+  boot.plymouth.enable = true;
 
-  # Configure network proxy if necessary
-  # networking.proxy.default = "http://user:password@proxy:port/";
-  # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
+  # ================================================================
+  # 2. 硬件与电源管理 (Hardware & Power)
+  # ================================================================
+  # 启用全部固件
+  hardware.enableAllFirmware = true;
 
-  # Enable networking
+  # 蓝牙支持
+  hardware.bluetooth.enable = true;
+  hardware.bluetooth.powerOnBoot = true;
+
+  # 传感器支持
+  hardware.sensor.iio.enable = true;
+
+  # Intel CPU 电源管理
+  services.thermald.enable = true;
+
+  # GNOME 默认电源管理
+  services.power-profiles-daemon.enable = true;
+
+  # 内存优化
+  zramSwap.enable = true;
+  zramSwap.memoryPercent = 50;
+
+  # ================================================================
+  # 3. 网络 (Networking)
+  # ================================================================
+  networking.hostName = "nixos";
   networking.networkmanager.enable = true;
 
-  # Set your time zone.
-  time.timeZone = "Asia/Shanghai";
+  # 关闭防火墙
+  networking.firewall.enable = false;
 
-  # Select internationalisation properties.
+  # Avahi (mDNS/局域网发现)
+  services.avahi = {
+    enable = true;
+    nssmdns4 = true;
+    publish = {
+      enable = true;
+      addresses = true;
+      userServices = true;
+      workstation = true;
+    };
+  };
+
+  # ================================================================
+  # 4. 本地化与字体 (Locale & Fonts)
+  # ================================================================
+  time.timeZone = "Asia/Shanghai";
   i18n.defaultLocale = "zh_CN.UTF-8";
 
   i18n.extraLocaleSettings = {
@@ -45,23 +81,102 @@
     LC_TIME = "zh_CN.UTF-8";
   };
 
-  # Enable the X11 windowing system.
+  # 输入法：IBus + 智能拼音
+  i18n.inputMethod = {
+    enable = true;
+    type = "ibus";
+    ibus.engines = with pkgs.ibus-engines; [
+      libpinyin
+    ];
+  };
+
+  # 字体配置
+  fonts = {
+    fontDir.enable = true;
+    enableGhostscriptFonts = true;
+    enableDefaultPackages = true;
+    packages = with pkgs; [
+      noto-fonts
+      noto-fonts-color-emoji
+      noto-fonts-cjk-sans
+      noto-fonts-cjk-serif
+      source-han-sans
+      source-han-serif
+      sarasa-gothic
+      wqy_microhei
+      inter
+      fira-code
+      nerd-fonts.fira-code
+      nerd-fonts.symbols-only
+    ];
+
+    fontconfig.defaultFonts = {
+      serif = [
+        "Noto Serif CJK SC"
+        "Source Han Serif SC"
+        "Symbols Nerd Font"
+        "Noto Color Emoji"
+      ];
+      sansSerif = [
+        "Noto Sans CJK SC"
+        "Source Han Sans SC"
+        "Symbols Nerd Font"
+        "Noto Color Emoji"
+      ];
+      monospace = [
+        "Sarasa Mono SC"
+        "Noto Sans Mono CJK SC"
+        "Symbols Nerd Font Mono"
+        "Noto Color Emoji"
+      ];
+      emoji = [ "Noto Color Emoji" ];
+    };
+  };
+
+  # ================================================================
+  # 5. 桌面环境 (Desktop Environment)
+  # ================================================================
   services.xserver.enable = true;
 
-  # Enable the GNOME Desktop Environment.
+  # GNOME
   services.xserver.displayManager.gdm.enable = true;
   services.xserver.desktopManager.gnome.enable = true;
 
-  # Configure keymap in X11
+  # 触摸板/触屏手势支持
+  services.xserver.libinput.enable = true;
+
+  # 键盘布局
   services.xserver.xkb = {
-    layout = "us";
-    variant = "";
+    layout = "jp,us";
+    model = "jp106";
+    options = "grp:alt_shift_toggle";
   };
 
-  # Enable CUPS to print documents.
+  console.useXkbConfig = true;
+
+  # 环境变量：强制 Wayland 和触控优化
+  environment.sessionVariables = {
+    "NIXOS_OZONE_WL" = "1";
+    "MOZ_ENABLE_WAYLAND" = "1";
+    "MOZ_WEBRENDER" = "1";
+    "ELECTRON_OZONE_PLATFORM_HINT" = "auto";
+    "_JAVA_AWT_WM_NONREPARENTING" = "1";
+    "QT_WAYLAND_DISABLE_WINDOWDECORATION" = "1";
+    "QT_QPA_PLATFORM" = "wayland";
+    "SDL_VIDEODRIVER" = "wayland";
+    "GDK_BACKEND" = "wayland";
+    "XDG_SESSION_TYPE" = "wayland";
+  };
+
+  # GNOME 外设
+  services.udev.packages = with pkgs; [ gnome-settings-daemon ];
+
+  # ================================================================
+  # 6. 音频与打印 (Audio & Services)
+  # ================================================================
   services.printing.enable = true;
 
-  # Enable sound with pipewire.
+  # Pipewire
   services.pulseaudio.enable = false;
   security.rtkit.enable = true;
   services.pipewire = {
@@ -69,68 +184,125 @@
     alsa.enable = true;
     alsa.support32Bit = true;
     pulse.enable = true;
-    # If you want to use JACK applications, uncomment this
-    #jack.enable = true;
-
-    # use the example session manager (no others are packaged yet so this is enabled by default,
-    # no need to redefine it in your config for now)
-    #media-session.enable = true;
   };
 
-  # Enable touchpad support (enabled default in most desktopManager).
-  # services.xserver.libinput.enable = true;
+  # ================================================================
+  # 7. 软件与应用 (Packages & Programs)
+  # ================================================================
+  nixpkgs.config.allowUnfree = true;
 
-  # Define a user account. Don't forget to set a password with ‘passwd’.
+  environment.systemPackages = with pkgs; [
+    rnote
+    foliate
+    gromit-mpx
+    mission-center
+    clapper
+    vlc
+    mpv
+
+    gnome-tweaks
+    adw-gtk3
+
+    gnomeExtensions.blur-my-shell
+    gnomeExtensions.caffeine
+    gnomeExtensions.dash-to-dock
+    gnomeExtensions.appindicator
+
+    fastfetch
+    btop
+    wl-clipboard
+
+    chromium
+    firefox
+    ayugram-desktop
+    telegram-desktop
+
+    nh
+    nixd
+    nixfmt-rfc-style
+    (vscode-with-extensions.override {
+      vscodeExtensions = with vscode-extensions; [
+        bbenoist.nix
+        editorconfig.editorconfig
+        esbenp.prettier-vscode
+        jnoortheen.nix-ide
+        ms-azuretools.vscode-docker
+        ms-python.python
+      ];
+    })
+  ];
+
+  # 程序配置
+  programs.git.enable = true;
+  programs.gnupg.agent = {
+    enable = true;
+    enableSSHSupport = true;
+  };
+  programs.neovim = {
+    enable = true;
+    defaultEditor = true;
+    vimAlias = true;
+  };
+
+  # Shell
+  programs.zsh.enable = true;
+  programs.fish.enable = true;
+
+  # Nix Index / Command Not Found
+  programs.nix-index-database.comma.enable = true;
+  programs.command-not-found.enable = false;
+  programs.nix-index = {
+    enable = true;
+    enableFishIntegration = true;
+  };
+
+  programs.firefox.enable = true;
+  programs.steam.enable = true;
+
+  virtualisation.docker.enable = true;
+  virtualisation.waydroid.enable = true;
+
+  # ================================================================
+  # 8. 用户与权限 (Users)
+  # ================================================================
   users.users.nixos = {
     isNormalUser = true;
     description = "nixos";
     extraGroups = [
-      "networkmanager"
       "wheel"
+      "video"
+      "docker"
+      "networkmanager"
+      "input"
+      "wireshark"
+      "libvirtd"
     ];
-    packages = with pkgs; [
-      #  thunderbird
-    ];
+    shell = pkgs.fish;
+    initialPassword = "nixos";
+  };
+  security.sudo.wheelNeedsPassword = false;
+
+  # ================================================================
+  # 9. Nix 核心配置 (Nix Settings)
+  # ================================================================
+  nix = {
+    channel.enable = false;
+    settings = {
+      experimental-features = [
+        "nix-command"
+        "flakes"
+      ];
+      substituters = [
+        "https://mirror.iscas.ac.cn/nix-channels/store"
+      ];
+      auto-optimise-store = true;
+    };
+    gc = {
+      automatic = true;
+      dates = "weekly";
+      options = "--delete-older-than 7d";
+    };
   };
 
-  # Install firefox.
-  programs.firefox.enable = true;
-
-  # Allow unfree packages
-  nixpkgs.config.allowUnfree = true;
-
-  # List packages installed in system profile. To search, run:
-  # $ nix search wget
-  environment.systemPackages = with pkgs; [
-    #  vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
-    #  wget
-  ];
-
-  # Some programs need SUID wrappers, can be configured further or are
-  # started in user sessions.
-  # programs.mtr.enable = true;
-  # programs.gnupg.agent = {
-  #   enable = true;
-  #   enableSSHSupport = true;
-  # };
-
-  # List services that you want to enable:
-
-  # Enable the OpenSSH daemon.
-  # services.openssh.enable = true;
-
-  # Open ports in the firewall.
-  # networking.firewall.allowedTCPPorts = [ ... ];
-  # networking.firewall.allowedUDPPorts = [ ... ];
-  # Or disable the firewall altogether.
-  # networking.firewall.enable = false;
-
-  # This value determines the NixOS release from which the default
-  # settings for stateful data, like file locations and database versions
-  # on your system were taken. It‘s perfectly fine and recommended to leave
-  # this value at the release version of the first install of this system.
-  # Before changing this value read the documentation for this option
-  # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
-  system.stateVersion = "25.11"; # Did you read the comment?
-
+  system.stateVersion = "25.11";
 }
