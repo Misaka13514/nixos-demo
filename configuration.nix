@@ -202,6 +202,33 @@
 
     gnome-tweaks
     adw-gtk3
+    dconf-editor
+
+    usbutils
+    pciutils
+    lshw
+    dmidecode
+    lm_sensors
+
+    ldns
+    curl
+    wget
+    mtr
+    nmap
+    iperf3
+    ethtool
+
+    ripgrep
+    fd
+    bat
+    eza
+
+    git
+    killall
+    lsof
+    file
+    tree
+    p7zip
 
     gnomeExtensions.blur-my-shell
     gnomeExtensions.caffeine
@@ -209,7 +236,9 @@
     gnomeExtensions.appindicator
 
     fastfetch
+    hyfetch
     btop
+    htop
     wl-clipboard
 
     chromium
@@ -220,6 +249,8 @@
     nh
     nixd
     nixfmt-rfc-style
+    nix-output-monitor
+    nix-tree
     (vscode-with-extensions.override {
       vscodeExtensions = with vscode-extensions; [
         bbenoist.nix
