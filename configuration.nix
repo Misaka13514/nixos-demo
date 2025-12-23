@@ -193,6 +193,9 @@
 
   environment.systemPackages = with pkgs; [
     rnote
+    xournalpp
+    krita
+    gimp
     foliate
     gromit-mpx
     mission-center
