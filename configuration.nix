@@ -139,11 +139,11 @@
   services.xserver.enable = true;
 
   # GNOME
-  services.xserver.displayManager.gdm.enable = true;
-  services.xserver.desktopManager.gnome.enable = true;
+  services.displayManager.gdm.enable = true;
+  services.desktopManager.gnome.enable = true;
 
   # 触摸板/触屏手势支持
-  services.xserver.libinput.enable = true;
+  services.libinput.enable = true;
 
   # 键盘布局
   services.xserver.xkb = {
