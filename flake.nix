@@ -23,6 +23,14 @@
             inputs.nur.modules.nixos.default
           ];
         };
+        fujitsu = nixpkgs.lib.nixosSystem {
+          modules = [
+            ./configuration.nix
+            ./fujitsu-hardware.nix
+            inputs.nix-index-database.nixosModules.default
+            inputs.nur.modules.nixos.default
+          ];
+        };
       };
     };
 }

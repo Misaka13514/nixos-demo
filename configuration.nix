@@ -16,6 +16,8 @@
   boot.kernelPackages = pkgs.linuxPackages_zen;
   boot.kernel.sysctl."kernel.sysrq" = 1;
 
+  boot.kernelParams = [ "mitigations=off" ];
+
   # 启用 Plymouth 启动动画
   boot.plymouth.enable = true;
 
@@ -40,6 +42,7 @@
 
   # 内存优化
   zramSwap.enable = true;
+  zramSwap.priority = 100;
   zramSwap.memoryPercent = 50;
 
   # ================================================================
